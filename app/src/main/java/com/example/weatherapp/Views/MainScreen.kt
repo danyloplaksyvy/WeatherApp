@@ -82,8 +82,6 @@ fun MainScreenItem(
     val weeklyBorder by animateDpAsState(
         targetValue = if (isWeeklyExpanded) 3.dp else 1.dp
     )
-//    println(forecast?.forecastday?.get(0)?.date)
-//    println(getFormatterDateForDay(forecast.forecastday.get(0).date, "MM-dd"))
 //     BG Image
     Image(
         painter = painterResource(id = R.drawable.mybg),
@@ -122,13 +120,23 @@ fun MainScreenItem(
             textAlign = TextAlign.Center
         )
         Text(
-            text = "H: 8° L: 6°",
+            text = "H: ${forecast?.forecastday?.getOrNull(0)?.day?.maxtemp_c?.roundToInt()}° L: ${
+                forecast?.forecastday?.getOrNull(
+                    0
+                )?.day?.mintemp_c?.roundToInt()
+            }°",
             fontSize = 16.sp,
             fontWeight = FontWeight.Normal,
             color = Color(220, 230, 253, 255),
             textAlign = TextAlign.Center
         )
-
+        // Location
+        Text(
+            text = "Location: Lon: ${location?.lon} Lat: ${location?.lat}",
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Normal,
+            color = Color(220, 230, 253, 255)
+        )
         Spacer(modifier = Modifier.weight(1f))
         Box(
             modifier = Modifier
@@ -191,14 +199,13 @@ fun MainScreenItem(
                 ) {
                     if (isHourlyExpanded) {
                         items(forecast?.forecastday?.getOrNull(0)?.hour?.take(24) ?: emptyList())
-                            { hourlyForecast ->
-                                ForecastHourlyItem(hourlyForecast = hourlyForecast)
-                            }
+                        { hourlyForecast ->
+                            ForecastHourlyItem(hourlyForecast = hourlyForecast)
+                        }
                     } else {
-                        items(forecast?.forecastday ?: emptyList()) {
-                            weeklyForecast ->
+                        items(forecast?.forecastday ?: emptyList()) { weeklyForecast ->
                             ForecastWeeklyItem(forecast = weeklyForecast)
-                        // Access to ForecastWeeklyItem
+                            // Access to ForecastWeeklyItem
                         }
                     }
                 }
@@ -277,7 +284,6 @@ fun ForecastHourlyItem(hourlyForecast: Hour) {
         )
     }
 }
-
 
 
 @Composable

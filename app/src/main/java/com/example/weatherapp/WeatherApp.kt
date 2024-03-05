@@ -11,8 +11,7 @@ import com.example.weatherapp.Views.MainScreen
 
 @Composable
 fun WeatherApp(navController: NavHostController) {
-//NEED TO CHANGE
-//    val navController = rememberNavController() /*NEED TO REMOVE*/
+
     val weatherViewModel: MainViewModel = viewModel()
     val viewStateForecast by weatherViewModel.forecastState
     NavHost(navController = navController, startDestination = Screen.MainScreen.route) {

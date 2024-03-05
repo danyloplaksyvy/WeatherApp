@@ -52,8 +52,15 @@ dependencies {
     // Image Loading
     implementation("io.coil-kt:coil-compose:2.4.0")
 
+    //Map
+    implementation("com.google.maps.android:maps-compose:2.15.0")
+    //Location
+    implementation ("com.google.android.gms:play-services-maps:18.1.0")
+
     //Blur
     //implementation "com.google.accompanist:accompanist-blur:0.22.0"
+    //ViewModel
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     //Retrofit
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     //JSON-Converter
