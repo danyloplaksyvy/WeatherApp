@@ -13,6 +13,15 @@ class MainViewModel : ViewModel() {
     private val _forecastState = mutableStateOf(ForecastState())
     val forecastState: State<ForecastState> = _forecastState
 
+    //Location
+    private val _location = mutableStateOf<LocationData?>(null)
+    val location: State<LocationData?> = _location
+
+    fun updateLocation(newLocation: LocationData) {
+        _location.value = newLocation
+        fetchWeather()
+    }
+
     init {
         fetchWeather()
     }
@@ -21,7 +30,7 @@ class MainViewModel : ViewModel() {
     private fun fetchWeather() {
         viewModelScope.launch {
             try {
-                val responseForecast = forecastService.getForecast()
+                val responseForecast = forecastService.getForecast(q = "${location.value?.latitude},${location.value?.longitude}")
                 _forecastState.value = _forecastState.value.copy(
                     loading = false,
                     location = responseForecast.location,
@@ -30,8 +39,8 @@ class MainViewModel : ViewModel() {
                     error = null
                 )
 
-                println("Данные о погоде успешно получены: $responseForecast")
-            } catch (e: Exception) { /*NEED TO UPDATE*/
+                println("Данные о погоде успешно получены: ${location.value?.longitude},${location.value?.latitude}")
+            } catch (e: Exception) {
                 _forecastState.value = _forecastState.value.copy(
                     loading = false,
                     error = "Error fetching forecast"

@@ -10,8 +10,6 @@ import kotlinx.parcelize.Parcelize
 data class Location(
     val name: String,
     val country: String,
-    val lat: Double,
-    val lon: Double
 ) : Parcelable
 
 @Parcelize
@@ -62,4 +60,11 @@ data class ForecastResponse(
     val current: Current,
     // Forecast part
     val forecast: Forecast
+)
+
+
+// Current Location
+data class LocationData(
+    val latitude: Double,
+    val longitude: Double
 )

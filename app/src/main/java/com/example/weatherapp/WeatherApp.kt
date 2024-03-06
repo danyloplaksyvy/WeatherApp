@@ -13,7 +13,7 @@ import com.example.weatherapp.Views.MainScreen
 fun WeatherApp(navController: NavHostController) {
 
     val weatherViewModel: MainViewModel = viewModel()
-    val viewStateForecast by weatherViewModel.forecastState
+    val viewStateForecast = weatherViewModel
     NavHost(navController = navController, startDestination = Screen.MainScreen.route) {
         composable(Screen.MainScreen.route) {
             MainScreen(viewModelForecast = viewStateForecast, navigationToCityListScreen =  {

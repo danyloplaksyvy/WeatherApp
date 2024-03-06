@@ -1,5 +1,11 @@
 package com.example.weatherapp.Views
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
@@ -10,12 +16,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,38 +30,52 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.weatherapp.*
 import com.example.weatherapp.R
 import com.example.weatherapp.ViewModel.MainViewModel
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
 fun MainScreen(
     navigationToCityListScreen: () -> Unit,
-    viewModelForecast: MainViewModel.ForecastState /*Inject ViewModel instance*/
+    viewModelForecast: MainViewModel /*Inject ViewModel instance*/
 ) {
+    // Location Variables
+    val context = LocalContext.current
+    val locationUtils = LocationUtils(context)
     // Check error, loading animation, load data from API
     Box(modifier = Modifier.fillMaxSize()) {
         when {
-            viewModelForecast.loading -> {
+            viewModelForecast.forecastState.value.loading -> {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
 
-            viewModelForecast.error != null -> {
+            viewModelForecast.forecastState.value.error != null -> {
                 Text(text = "Something wrong")
             }
 
             else -> {
+                // Call for getting coordinates
+                CurrentLocation(locationUtils, context, viewModel = viewModelForecast)
+                // Call for getting interface
                 MainScreenItem(
-                    location = viewModelForecast.location,
-                    current = viewModelForecast.current,
-                    forecast = viewModelForecast.forecast,
+                    location = viewModelForecast.forecastState.value.location,
+                    current = viewModelForecast.forecastState.value.current,
+                    forecast = viewModelForecast.forecastState.value.forecast,
                     navigationToCityListScreen
                 )
             }
@@ -71,6 +91,8 @@ fun MainScreenItem(
     forecast: Forecast?,
     navigationToCityListScreen: () -> Unit
 ) {
+
+
     // Hourly, Weekly transition and Animation
     var isHourlyExpanded by remember { mutableStateOf(true) }
     var isWeeklyExpanded by remember { mutableStateOf(false) }
@@ -99,9 +121,16 @@ fun MainScreenItem(
         // Main Text
         Spacer(modifier = Modifier.height(125.dp))
         Text(
-            text = "${location?.name}, ${location?.country}",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
+            buildAnnotatedString {
+                val spanStyleMain = SpanStyle(fontWeight = FontWeight.Bold, fontSize = 32.sp)
+                withStyle(style = spanStyleMain) {
+                    append("${location?.name}, ")
+                }
+                val spanStyleSecond = SpanStyle(fontSize = 24.sp)
+                withStyle(style = spanStyleSecond) {
+                    append("${location?.country}")
+                }
+            },
             color = Color(216, 220, 228, 255),
             textAlign = TextAlign.Center
         )
@@ -129,13 +158,6 @@ fun MainScreenItem(
             fontWeight = FontWeight.Normal,
             color = Color(220, 230, 253, 255),
             textAlign = TextAlign.Center
-        )
-        // Location
-        Text(
-            text = "Location: Lon: ${location?.lon} Lat: ${location?.lat}",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            color = Color(220, 230, 253, 255)
         )
         Spacer(modifier = Modifier.weight(1f))
         Box(
@@ -195,7 +217,7 @@ fun MainScreenItem(
                         .background(Color(31, 60, 75, 150), shape = MaterialTheme.shapes.medium),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
-//                     We take 24 items to make a 24 hour forecast for hourly forecast
+                    // We take 24 items to make a 24 hour forecast for hourly forecast
                 ) {
                     if (isHourlyExpanded) {
                         items(forecast?.forecastday?.getOrNull(0)?.hour?.take(24) ?: emptyList())
@@ -317,3 +339,54 @@ fun ForecastWeeklyItem(forecast: ForecastDay) {
     }
 }
 
+
+@Composable
+fun CurrentLocation(locationUtils: LocationUtils, context: Context, viewModel: MainViewModel) {
+    val location = viewModel.location.value
+
+    // Need to show pop up for permission granting or access location if have permission
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { permissions ->
+            if (permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+                && permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+            ) {
+                // Access to location
+                locationUtils.requestLocationUpdates(viewModel = viewModel)
+            } else {
+                // Ask for permission
+                val rationaleRequired = ActivityCompat.shouldShowRequestPermissionRationale(
+                    context as MainActivity,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) || ActivityCompat.shouldShowRequestPermissionRationale(
+                    context as MainActivity,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+                // If user presses deny - we show toast
+                if (rationaleRequired) {
+                    Toast.makeText(
+                        context,
+                        "Location Permission is required for current location weather. Change it in settings manually.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+    )
+
+//     Call it when function called
+    DisposableEffect(Unit) {
+        if (!locationUtils.hasLocationPermission(context)) {
+            requestPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                )
+            )
+        } else {
+            locationUtils.requestLocationUpdates(viewModel)
+        }
+        onDispose {}
+    }
+
+}
